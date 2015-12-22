@@ -26,6 +26,29 @@ func TestExtractAndFindJSON(t *testing.T) {
 	if ref != "https://www.facebook.com/" {
 		t.Fail()
 	}
+
+	err = q.Array("bid", "request", "imp")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = q.ForEach(func(i Query) error {
+		w, err := i.Int64("banner", "w")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		log.Println(w)
+		if w != 300 {
+			t.Fail()
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func BenchmarkExtractGoAndFindJSON(b *testing.B) {

@@ -13,29 +13,31 @@ type Query struct {
 	index int
 }
 
-func (q Query) Name() string {
-	items := make([]string, 0)
-
-	i := q.index
-	for i != 0 {
-		//items = append(items, q.value.nodes[i].name)
-		i = q.value.nodes[i].up
+func (q *Query) Array(keys ...string) (err error) {
+	i, err := q.getIndex(TypeArray, keys)
+	if err != nil {
+		return
 	}
 
-	n := len(items)
-	for i := n/2 - 1; i >= 0; i-- {
-		j := n - 1 - i
-		items[i], items[j] = items[j], items[i]
+	q.index = i
+	return
+}
+
+func (q *Query) Object(keys ...string) (err error) {
+	i, err := q.getIndex(TypeObject, keys)
+	if err != nil {
+		return
 	}
 
-	return strings.Join(items, ".")
+	q.index = i
+	return
 }
 
 func (q Query) ForEach(callback func(q Query) error) (err error) {
 	kind := q.value.nodes[q.index].kind
 
 	if kind != TypeObject && kind != TypeArray {
-		err = fmt.Errorf("key '%s' is not an object or array", q.Name())
+		err = fmt.Errorf("node is not an object or array")
 		return
 	}
 
@@ -58,16 +60,6 @@ func (q Query) ForEach(callback func(q Query) error) (err error) {
 	return
 }
 
-func (q Query) Object(keys ...string) (err error) {
-	i, err := q.getIndex(TypeObject, keys)
-	if err != nil {
-		return
-	}
-
-	q.index = i
-	return
-}
-
 func (q Query) String(keys ...string) (result string, err error) {
 	i, err := q.getIndex(TypeString, keys)
 	if err != nil {
@@ -87,7 +79,7 @@ func (q Query) Float64(keys ...string) (result float64, err error) {
 	}
 
 	offset := q.value.nodes[i].valueOffset
-	length := q.value.nodes[i].valueLength - 1
+	length := q.value.nodes[i].valueLength
 	s := string(q.value.bytes[offset : offset+length])
 	f, err := strconv.ParseFloat(s, 64)
 	if err != nil {
