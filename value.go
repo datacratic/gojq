@@ -8,17 +8,40 @@ import (
 	"unsafe"
 )
 
+type Kind int
+
 const (
-	TypeRoot = iota
-	TypeObject
-	TypeArray
-	TypeString
-	TypeNumber
-	TypeFalse
-	TypeTrue
-	TypeNull
-	TypeUnknown
+	Root Kind = iota
+	Array
+	Object
+	String
+	Number
+	True
+	False
+	Null
+	Unknown
 )
+
+func (k Kind) String() string {
+	switch k {
+	case Array:
+		return "Array"
+	case Object:
+		return "Object"
+	case String:
+		return "String"
+	case Number:
+		return "Number"
+	case True:
+		return "True"
+	case False:
+		return "False"
+	case Null:
+		return "Null"
+	default:
+		return "Unknown"
+	}
+}
 
 type Value struct {
 	nodes []node
@@ -60,7 +83,7 @@ func (value *Value) findFrom(index int, key string) int {
 	n := len(k)
 
 	for {
-		length := value.nodes[i].fieldLength - 1
+		length := value.nodes[i].fieldLength
 		if n == length {
 			offset := value.nodes[i].fieldOffset
 			if bytes.Equal(k, value.bytes[offset:offset+length]) {

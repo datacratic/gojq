@@ -60,10 +60,15 @@ if err != nil {
 
 Queries are nicer albeit slower (~ x2) than the equivalent required `map[string]interface{}` gymnastic. Because part of the parsing is done lazily, some conversions only happen inside queries. This is by design and optimize the case where you need to query only a few fields from the JSON payload.
 
+# documentation
+See [documentation](https://godoc.org/github.com/datacratic/gojq) for details.
+
 # benchmarks
 Using 10,000 samples found in file samples.json.
 
 ```
+$ go version
+go version go1.5 linux/amd64
 $ go test -v -bench . -run none -benchmem ./...
 PASS
 BenchmarkExtractGoAndFindJSON-32    10000000           133 ns/op           0 B/op          0 allocs/op

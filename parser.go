@@ -17,7 +17,7 @@ var (
 )
 
 type node struct {
-	kind        int
+	kind        Kind
 	fieldOffset int
 	fieldLength int
 	valueOffset int
@@ -26,6 +26,8 @@ type node struct {
 	up          int
 	down        int
 	next        int
+	back        int
+	overwrite   int
 }
 
 type parser struct {
@@ -37,8 +39,7 @@ type parser struct {
 func (p *parser) parse(value *Value) (err error) {
 	n := len(value.bytes)
 	p.bytes = append(value.bytes, ']', '}', '"', ' ')
-	p.nodes = append(value.nodes[:0], node{kind: TypeRoot})
-	p.nodes[0].kind = TypeRoot
+	p.nodes = append(value.nodes[:0], node{kind: Root})
 	value.bytes = p.bytes[:n]
 	value.nodes = p.nodes[:0]
 	if err = p.parseValue(0); err != nil {
@@ -55,7 +56,7 @@ func (p *parser) parse(value *Value) (err error) {
 }
 
 func (p *parser) parseArray(item int) (err error) {
-	p.nodes[item].kind = TypeArray
+	p.nodes[item].kind = Array
 
 	if p.bytes[p.i] == ']' {
 		p.i++
@@ -63,10 +64,12 @@ func (p *parser) parseArray(item int) (err error) {
 	}
 
 	p.nodes[item].down = len(p.nodes)
+	index := 0
+
 	for {
-		index := len(p.nodes)
-		p.nodes = append(p.nodes, node{up: item})
+		p.nodes = append(p.nodes, node{up: item, back: index})
 		p.nodes[item].count++
+		index = len(p.nodes) - 1
 		if err = p.parseValue(index); err != nil {
 			return
 		}
@@ -90,7 +93,7 @@ func (p *parser) parseArray(item int) (err error) {
 }
 
 func (p *parser) parseObject(item int) (err error) {
-	p.nodes[item].kind = TypeObject
+	p.nodes[item].kind = Object
 
 	if p.bytes[p.i] == '}' {
 		p.i++
@@ -98,13 +101,15 @@ func (p *parser) parseObject(item int) (err error) {
 	}
 
 	p.nodes[item].down = len(p.nodes)
+	index := 0
+
 	for {
 		if p.bytes[p.i] == '"' {
 			p.i++
 
-			index := len(p.nodes)
-			p.nodes = append(p.nodes, node{up: item})
+			p.nodes = append(p.nodes, node{up: item, back: index})
 			p.nodes[item].count++
+			index := len(p.nodes) - 1
 			if err = p.parseField(index); err != nil {
 				return
 			}
@@ -145,7 +150,7 @@ func (p *parser) parseField(item int) (err error) {
 	}
 
 	p.nodes[item].fieldOffset = j
-	p.nodes[item].fieldLength = p.i - j
+	p.nodes[item].fieldLength = p.i - j - 1
 
 	if p.bytes[p.i] != ':' {
 		err = ErrExpectedFieldValue
@@ -158,7 +163,7 @@ func (p *parser) parseField(item int) (err error) {
 }
 
 func (p *parser) parseString(item int) (err error) {
-	p.nodes[item].kind = TypeString
+	p.nodes[item].kind = String
 
 	j := p.i
 
@@ -176,7 +181,7 @@ func (p *parser) parseString(item int) (err error) {
 	}
 
 	p.nodes[item].valueOffset = j
-	p.nodes[item].valueLength = p.i - j
+	p.nodes[item].valueLength = p.i - j - 1
 	return
 }
 
@@ -206,7 +211,7 @@ func (p *parser) parseValue(item int) (err error) {
 		}
 
 		p.i += 4
-		p.nodes[item].kind = TypeTrue
+		p.nodes[item].kind = True
 	case 'f':
 		if p.bytes[p.i+1] != 'a' || p.bytes[p.i+2] != 'l' || p.bytes[p.i+3] != 's' || p.bytes[p.i+4] != 'e' {
 			err = ErrExpectedFalse
@@ -214,7 +219,7 @@ func (p *parser) parseValue(item int) (err error) {
 		}
 
 		p.i += 5
-		p.nodes[item].kind = TypeFalse
+		p.nodes[item].kind = False
 	case 'n':
 		if p.bytes[p.i+1] != 'u' || p.bytes[p.i+2] != 'l' || p.bytes[p.i+3] != 'l' {
 			err = ErrExpectedNull
@@ -222,7 +227,7 @@ func (p *parser) parseValue(item int) (err error) {
 		}
 
 		p.i += 4
-		p.nodes[item].kind = TypeNull
+		p.nodes[item].kind = Null
 	default:
 		for {
 			switch p.bytes[p.i] {
@@ -235,7 +240,7 @@ func (p *parser) parseValue(item int) (err error) {
 			break
 		}
 
-		p.nodes[item].kind = TypeNumber
+		p.nodes[item].kind = Number
 	}
 
 	p.nodes[item].valueOffset = j

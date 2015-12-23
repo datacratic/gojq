@@ -18,36 +18,48 @@ func TestExtractAndFindJSON(t *testing.T) {
 	}
 
 	q := v.NewQuery()
-	ref, err := q.String("bid", "request", "site", "ref")
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	if ref != "https://www.facebook.com/" {
-		t.Fail()
-	}
-
-	err = q.Array("bid", "request", "imp")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = q.ForEach(func(i Query) error {
-		w, err := i.Int64("banner", "w")
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		log.Println(w)
-		if w != 300 {
-			t.Fail()
-		}
-
+	q.Walk(func(q *Query) error {
+		log.Println(q.index, q.Kind(), q.Count(), q.Key(), q.Value())
 		return nil
 	})
 
-	if err != nil {
+	if ref, err := q.String("bid", "request", "site", "ref"); err != nil {
 		t.Fatal(err)
+	} else {
+		if ref != "https://www.facebook.com/" {
+			t.Fail()
+		}
+	}
+
+	if w, err := q.Int64("bid", "request", "imp", "#0", "banner", "w"); err != nil {
+		t.Fatal(err)
+	} else {
+		if w != 300 {
+			t.Fail()
+		}
+	}
+
+	if p, err := q.Int64("bid", "response", "seatbid", "#0", "bid", "@impid", "1", "price"); err != nil {
+		t.Fatal(err)
+	} else {
+		if p != 1500 {
+			t.Fail()
+		}
+	}
+
+	if err := q.FindArray("bid", "request", "imp"); err != nil {
+		t.Fatal(err)
+	}
+
+	q.Down()
+
+	if h, err := q.Int64("banner", "h"); err != nil {
+		t.Fatal(err)
+	} else {
+		if h != 250 {
+			t.Fail()
+		}
 	}
 }
 
