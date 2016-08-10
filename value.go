@@ -5,6 +5,7 @@ package jq
 import (
 	"bytes"
 	"io"
+	"strconv"
 	"unsafe"
 )
 
@@ -56,7 +57,7 @@ func (value *Value) Unmarshal(data []byte) (err error) {
 }
 
 func (value *Value) UnmarshalFrom(r io.Reader) (err error) {
-	b := bytes.NewBuffer(value.bytes)
+	b := bytes.NewBuffer(value.bytes[:0])
 
 	if _, err = b.ReadFrom(r); err != nil {
 		return
@@ -73,6 +74,41 @@ func (value *Value) NewQuery() Query {
 		value: value,
 		index: 0,
 	}
+}
+
+func (value *Value) Extract(keys ...string) (result interface{}) {
+	q := value.NewQuery()
+
+	i, err := q.find(keys)
+	if err != nil {
+		return
+	}
+
+	switch value.nodes[i].kind {
+	case String:
+		offset := value.nodes[i].valueOffset
+		length := value.nodes[i].valueLength
+		s := string(value.bytes[offset : offset+length])
+		result = s
+	case Number:
+		offset := value.nodes[i].valueOffset
+		length := value.nodes[i].valueLength
+		s := string(value.bytes[offset : offset+length])
+		f, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			return
+		}
+
+		result = f
+	case True:
+		result = true
+	case False:
+		result = false
+	case Null:
+		result = nil
+	}
+
+	return
 }
 
 func (value *Value) findFrom(index int, key string) int {

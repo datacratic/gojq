@@ -219,14 +219,14 @@ func (q *Query) Int64(keys ...string) (result int64, err error) {
 	return
 }
 
-func (q *Query) getIndex(kind Kind, keys []string) (result int, err error) {
+func (q *Query) find(keys []string) (result int, err error) {
 	index := q.index
 
 	for i, n := 0, len(keys); i < n; i++ {
 		key := keys[i]
 
 		switch key[0] {
-		case '#':
+		case '@':
 			j := 0
 			if j, err = strconv.Atoi(key[1:]); err != nil {
 				return
@@ -239,7 +239,7 @@ func (q *Query) getIndex(kind Kind, keys []string) (result int, err error) {
 			}
 
 			index = p.index
-		case '@':
+		case '$':
 			p := &Query{value: q.value, index: index}
 			if !p.AtKey(key[1:], keys[i+1]) {
 				err = ErrNotFound
@@ -249,11 +249,21 @@ func (q *Query) getIndex(kind Kind, keys []string) (result int, err error) {
 			index = p.index
 			i++
 		default:
-			if index = q.value.findFrom(index, key); i < 0 {
+			if index = q.value.findFrom(index, key); index < 0 {
 				err = ErrNotFound
 				return
 			}
 		}
+	}
+
+	result = index
+	return
+}
+
+func (q *Query) getIndex(kind Kind, keys []string) (result int, err error) {
+	index, err := q.find(keys)
+	if err != nil {
+		return
 	}
 
 	if k := q.value.nodes[index].kind; k != kind {

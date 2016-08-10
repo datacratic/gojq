@@ -32,7 +32,7 @@ func TestExtractAndFindJSON(t *testing.T) {
 		}
 	}
 
-	if w, err := q.Int64("bid", "request", "imp", "#0", "banner", "w"); err != nil {
+	if w, err := q.Int64("bid", "request", "imp", "@0", "banner", "w"); err != nil {
 		t.Fatal(err)
 	} else {
 		if w != 300 {
@@ -40,7 +40,7 @@ func TestExtractAndFindJSON(t *testing.T) {
 		}
 	}
 
-	if p, err := q.Int64("bid", "response", "seatbid", "#0", "bid", "@impid", "1", "price"); err != nil {
+	if p, err := q.Int64("bid", "response", "seatbid", "@0", "bid", "$impid", "1", "price"); err != nil {
 		t.Fatal(err)
 	} else {
 		if p != 1500 {
